@@ -30,3 +30,6 @@ Commands are available inside the app, type help to see all, it's possible ot us
 
 While the program is running, you can initiate a manual file synchornization (using winscp) - remote-to-local, or local-to-remote, preview option is available, and delete files options is also available.
 
+##### Dependencies
+This project uses a modified version of WinSCP, as well as danelkhen/corex power extensions library, dependencies are included with the source, and project should compile as/is.
+
