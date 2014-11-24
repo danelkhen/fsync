@@ -1,0 +1,41 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.22310.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fsync", "src\fsync\fsync.csproj", "{B5C7A118-C858-46B9-BE87-C851DC744CE9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinSCPnet", "lib-src\winscp\dotnet\WinSCPnet.csproj", "{DF44CF5D-6809-4557-A343-FEC46F14B3FF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lib-src", "lib-src", "{C5BEEEF3-404A-4F42-B792-DA631535F779}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lib", "lib", "{0C908CE8-E771-401F-A391-9F99E76E9891}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "corex", "corex", "{2FC665E5-92DD-4945-AEA2-5059B7FE7E13}"
+	ProjectSection(SolutionItems) = preProject
+		lib\corex\corex.dll = lib\corex\corex.dll
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B5C7A118-C858-46B9-BE87-C851DC744CE9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B5C7A118-C858-46B9-BE87-C851DC744CE9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B5C7A118-C858-46B9-BE87-C851DC744CE9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B5C7A118-C858-46B9-BE87-C851DC744CE9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DF44CF5D-6809-4557-A343-FEC46F14B3FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DF44CF5D-6809-4557-A343-FEC46F14B3FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DF44CF5D-6809-4557-A343-FEC46F14B3FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DF44CF5D-6809-4557-A343-FEC46F14B3FF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{DF44CF5D-6809-4557-A343-FEC46F14B3FF} = {C5BEEEF3-404A-4F42-B792-DA631535F779}
+		{2FC665E5-92DD-4945-AEA2-5059B7FE7E13} = {0C908CE8-E771-401F-A391-9F99E76E9891}
+	EndGlobalSection
+EndGlobal
