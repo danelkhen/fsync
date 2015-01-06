@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using WinSCP;
 using System.IO;
 using Corex.Helpers;
+using System.Globalization;
 
 namespace fsync
 {
@@ -187,6 +188,14 @@ namespace fsync
         {
             FileWatcher.StopRealtime();
         }
+        static DateTime? TryParseExact(string s, string format)
+        {
+            DateTime dt;
+            if (DateTime.TryParseExact(s, format, null, DateTimeStyles.None, out dt))
+                return dt;
+            return null;
+
+        }
         public void BackupLocal()
         {
             var from = DateTime.Today;
@@ -195,7 +204,9 @@ namespace fsync
             {
                 var lastDir = BackupDir.ToDirectoryInfo().GetDirectories().Select(t => t.Name).OrderBy(t => t).LastOrDefault();
                 if (lastDir != null)
-                    from = DateTime.ParseExact(lastDir, format, null);
+                {
+                    from = TryParseExact(lastDir, format).GetValueOrDefault(from);
+                }
             }
             var dir = BackupDir.ToDirectoryInfo().GetDirectory(DateTime.Now.ToString(format));
             if (!dir.Exists)
@@ -205,9 +216,9 @@ namespace fsync
             {
                 LocalFile.ToFileInfo().CopyToDirectory(dir, true);
             }
-            else if(LocalDir.ToDirectoryInfo().Exists)
+            else if (LocalDir.ToDirectoryInfo().Exists)
             {
-                LocalDir.ToDirectoryInfo().Copy("*", true, dir, true, true, fi => fi.LastWriteTime >= from);
+                LocalDir.ToDirectoryInfo().Copy("*", IncludeSubdirectories, dir, true, true, fi => fi.LastWriteTime >= from);
             }
         }
 
@@ -234,6 +245,10 @@ namespace fsync
         public void Connect()
         {
             Session.Do(t => t.Open(SessionOptions));
+        }
+        public void Disconnect()
+        {
+            Session.Do(t => t.Abort());
         }
 
         void Dispose()
@@ -289,9 +304,12 @@ namespace fsync
             }
             else
             {
+                string fileMask = null;
+                if(!IncludeSubdirectories)
+                    fileMask = "|*/";
                 var x = Session.Get(t => t.SynchronizeDirectories2(syncMode, LocalDir, RemoteDir, allowDelete, false,
                     SynchronizationCriteria.Time,
-                    new TransferOptions { TransferMode = TransferMode.Automatic },
+                    new TransferOptions { TransferMode = TransferMode.Automatic, FileMask = fileMask },
                     new SynchronizeOptions { Preview = preview }));
                 x.Check();
                 Console.WriteLine("Uploads: {0} Downloads: {1} Removals: {2} Failures:{3}", x.Uploads.Count, x.Downloads.Count, x.Removals.Count, x.Failures.Count);

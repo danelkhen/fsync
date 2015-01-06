@@ -50,6 +50,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Extensions.cs" />
     <Compile Include="FakeConsole.cs" />
     <Compile Include="FSync.cs" />
     <Compile Include="FileWatcher.cs" />

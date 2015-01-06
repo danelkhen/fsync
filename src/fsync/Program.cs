@@ -19,7 +19,16 @@ namespace fsync
             try
             {
                 System.Console.Title = "fsync";
-                new Program { Args = args.ToList() }.Run();
+                var p = new Program { Args = args.ToList() };
+                System.Console.CancelKeyPress += (s, e) =>
+                {
+                    try
+                    {
+                        p.DisconnectSession();
+                    }
+                    catch { }
+                };
+                p.Run();
                 System.Console.ReadLine();
                 return 0;
             }
@@ -48,29 +57,34 @@ namespace fsync
             if (Args.IsNotNullOrEmpty())
             {
                 var filename = Args[0].Trim('\"');
-                System.Console.Title = filename + " - FSync";
+                System.Console.Title = Path.GetFileName(filename);
                 Config = LoadConfig(new FileInfo(filename));
             }
             Console = new FakeConsole { DoWriteLine = System.Console.WriteLine };
 
             ConnectSession();
             AutoRestart = true;
-            var fp1 = Config["FolderPair1"];
-            FSyncs = new List<FSync>
+            FSyncs = new List<FSync>();
+            for (var i = 1; i < 10; i++)
             {
-                new FSync
+                var fp = Config.TryGetValue("FolderPair"+i);
+                if (fp == null)
+                    continue;
+
+                var fs = new FSync
                 {
-                    AutoConnect = fp1.Get<bool>("AutoConnect"),
-                    AutoStartRealTime = fp1.Get<bool>("AutoStartRealTime"),
+                    AutoConnect = fp.Get<bool>("AutoConnect"),
+                    AutoStartRealTime = fp.Get<bool>("AutoStartRealTime"),
                     Session = Session,
                     Console = new FakeConsole { DoWriteLine = s => Console.WriteLine("#1: {0}", s) },
-                    IncludeSubdirectories =  fp1.Get<bool>("IncludeSubdirectories"),
-                    LocalDir = fp1["LocalDir"],
-                    BackupDir = fp1["BackupDir"],
-                    RemoteDir = fp1["RemoteDir"],
+                    IncludeSubdirectories = fp.Get<bool>("IncludeSubdirectories"),
+                    LocalDir = fp["LocalDir"],
+                    BackupDir = fp["BackupDir"],
+                    RemoteDir = fp["RemoteDir"],
                     FilesUploaded = FSync_FilesUploaded,
-                },
-            };
+                };
+                FSyncs.Add(fs);
+            }
             FSyncs.ForEach(t => t.Init());
             StartMenu();
         }
@@ -139,6 +153,13 @@ namespace fsync
             if (FSyncs != null)
                 FSyncs.ForEach(t => t.Session = Session);
         }
+
+        void DisconnectSession()
+        {
+            if (Session != null)
+                Session.Do(t => t.Abort());
+        }
+
 
         Dictionary<string, Dictionary<string, string>> LoadConfig(FileInfo file)
         {
@@ -255,15 +276,4 @@ namespace fsync
         public List<string> Args { get; set; }
     }
 
-
-    static class Extensions
-    {
-        public static T Get<T>(this Dictionary<string, string> dic, string key, T defaultValue=default(T))
-        {
-            var value = dic.TryGetValue(key);
-            if (value.IsNullOrEmpty())
-                return defaultValue;
-            return (T)Convert.ChangeType(value, typeof(T));
-        }
-    }
 }
