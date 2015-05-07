@@ -7,6 +7,7 @@ using System.Threading;
 using Microsoft.Win32;
 using Microsoft.Win32.SafeHandles;
 using System.Runtime.InteropServices;
+using System.Reflection;
 
 namespace WinSCP
 {
@@ -74,6 +75,8 @@ namespace WinSCP
                     xmlLogSwitch + "/xmlgroups /nointeractiveinput " + assemblyVersionSwitch +
                     configSwitch + logSwitch + _session.AdditionalExecutableArguments;
 
+                Tools.AddRawParameters(ref arguments, _session.RawConfiguration, "/rawconfig");
+
                 _process = new Process();
                 _process.StartInfo.FileName = executablePath;
                 _process.StartInfo.WorkingDirectory = Path.GetDirectoryName(executablePath);
@@ -90,7 +93,7 @@ namespace WinSCP
 
         private static string LogPathEscape(string path)
         {
-            return Session.ArgumentEscape(path).Replace("!", "!!");
+            return Tools.ArgumentEscape(path).Replace("!", "!!");
         }
 
         public void Abort()
@@ -441,10 +444,12 @@ namespace WinSCP
             return new ConsoleCommStruct(_session, _fileMapping);
         }
 
-        private static bool TryCreateEvent(string name, out EventWaitHandle ev)
+        private bool TryCreateEvent(string name, out EventWaitHandle ev)
         {
             bool createdNew;
+            _logger.WriteLine("Creating event {0}", name);
             ev = new EventWaitHandle(false, EventResetMode.AutoReset, name, out createdNew);
+            _logger.WriteLine("Created event {0} with handle {1}, new {2}", name, ev.SafeWaitHandle.DangerousGetHandle(), createdNew);
             return createdNew;
         }
 
@@ -475,15 +480,36 @@ namespace WinSCP
             }
         }
 
+        private void AddInput(string str)
+        {
+            Type structType = typeof(ConsoleInputEventStruct);
+            FieldInfo strField = structType.GetField("Str");
+            object[] attributes = strField.GetCustomAttributes(typeof(MarshalAsAttribute), false);
+            if (attributes.Length != 1)
+            {
+                throw new InvalidOperationException("MarshalAs attribute not found for ConsoleInputEventStruct.Str");
+            }
+            MarshalAsAttribute marshalAsAttribute = (MarshalAsAttribute)attributes[0];
+
+            if (marshalAsAttribute.SizeConst <= str.Length)
+            {
+                throw new SessionLocalException(
+                    _session,
+                    string.Format(CultureInfo.CurrentCulture, "Input [{0}] is too long ({1} limit)", str, marshalAsAttribute.SizeConst));
+            }
+
+            lock (_input)
+            {
+                _input.Add(str);
+                _inputEvent.Set();
+            }
+        }
+
         public void ExecuteCommand(string command)
         {
             using (_logger.CreateCallstack())
             {
-                lock (_input)
-                {
-                    _input.Add(command);
-                    _inputEvent.Set();
-                }
+                AddInput(command);
             }
         }
 
@@ -491,9 +517,18 @@ namespace WinSCP
         {
             using (_logger.CreateCallstack())
             {
-                _logger.WriteLine("Waiting for process to exit");
+                int timeout;
 
-                if (!_process.WaitForExit(1000))
+                #if DEBUG
+                // in debug build, we expect the winscp.exe to run in tracing mode, being very slow
+                timeout = 10000;
+                #else
+                timeout = 2000;
+                #endif
+
+                _logger.WriteLine("Waiting for process to exit ({0} ms)", timeout);
+
+                if (!_process.WaitForExit(timeout))
                 {
                     _logger.WriteLine("Killing process");
                     _process.Kill();

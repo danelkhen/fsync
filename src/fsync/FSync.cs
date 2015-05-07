@@ -227,6 +227,7 @@ namespace fsync
         public SessionOptions SessionOptions { get; set; }
         public void Init()
         {
+            LocalDir.ToDirectoryInfo().VerifyExists();
             if (Session == null)
             {
                 Session = ThreadSafe.Create(new Session());

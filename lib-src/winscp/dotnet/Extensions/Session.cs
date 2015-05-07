@@ -84,7 +84,7 @@ namespace WinSCP
                         BooleanSwitch(mirror, "mirror"),
                         options.ToSwitches(),
                         criteriaName,
-                        ArgumentEscape(localPath), ArgumentEscape(remotePath),
+                        Tools.ArgumentEscape(localPath), Tools.ArgumentEscape(remotePath),
                         BooleanSwitch(options2.Preview, "preview"))
                         );
 

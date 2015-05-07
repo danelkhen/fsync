@@ -1,11 +1,11 @@
 ﻿[Session]
-HostName=username-off.dev.booking.com
+HostName=remote-machine
 UserName=username
 Password=Y0urPassw0rd
 [FolderPair1]
 AutoConnect=false
 AutoStartRealTime=true
 IncludeSubdirectories=true
-LocalDir=C:\Projects\git_tree\main\apps\admin\ambassadors\
-BackupDir=C:\Projects\backup\main\apps\admin\ambassadors\
-RemoteDir=/usr/local/git_tree/main/apps/admin/ambassadors/
+LocalDir=C:\myproj\
+BackupDir=C:\backup\myproj\
+RemoteDir=/usr/local/myproj/

@@ -13,7 +13,7 @@ namespace WinSCP
             if ((NodeType != XmlNodeType.Element) ||
                 IsEmptyElement)
             {
-                throw new InvalidOperationException();
+                throw new InvalidOperationException("Cannot use ElementLogReader with non-element node or empty element");
             }
 
             _localName = _parentReader.Reader.LocalName;
@@ -80,6 +80,6 @@ namespace WinSCP
         private readonly CustomLogReader _parentReader;
         private readonly string _localName;
         private readonly int _depth;
-        private bool _read;
+        protected bool _read;
     }
 }

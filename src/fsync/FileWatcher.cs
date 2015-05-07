@@ -24,7 +24,7 @@ namespace fsync
         {
             if (Watcher != null)
                 return;
-            IdleDetector = new IdleDetector { Timeout = TimeSpan.FromMilliseconds(100), Idle=IdleDetector_Idle };
+            IdleDetector = new IdleDetector { Timeout = TimeSpan.FromMilliseconds(100), Idle = IdleDetector_Idle };
             IdleDetector.Start();
             Watcher = new FileSystemWatcher(LocalDir, Filter ?? "*");
             Watcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName;// | NotifyFilters.DirectoryName;
@@ -44,12 +44,14 @@ namespace fsync
             var list = WatcherEvents.ToList();
             WatcherEvents.Clear();
             var list2 = new List<FileSystemEventArgs>();
-            foreach(var e in list)
+            foreach (var e in list)
             {
-                if(e.ChangeType==WatcherChangeTypes.Changed)
+                if (e.ChangeType == WatcherChangeTypes.Changed)
                 {
+                    if (e.Name.Contains("~"))
+                        continue;
                     //if (File.Exists(e.FullPath))
-                        list2.Add(e);
+                    list2.Add(e);
                 }
             }
             if (list2.Count > 0)
