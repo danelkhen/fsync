@@ -24,7 +24,7 @@ namespace fsync
         {
             if (Watcher != null)
                 return;
-            IdleDetector = new IdleDetector { Timeout = TimeSpan.FromMilliseconds(100), Idle = IdleDetector_Idle };
+            IdleDetector = new IdleDetector { Timeout = TimeSpan.FromMilliseconds(200), Idle = IdleDetector_Idle };
             IdleDetector.Start();
             Watcher = new FileSystemWatcher(LocalDir, Filter ?? "*");
             Watcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName;// | NotifyFilters.DirectoryName;
