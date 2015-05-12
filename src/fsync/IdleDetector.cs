@@ -22,7 +22,7 @@ namespace fsync
         public void Ping()
         {
             //LastPing = DateTime.Now;
-            Timer.Change(Timeout, TimeSpan.FromMilliseconds(100));
+            Timer.Change(Timeout, TimeSpan.FromMilliseconds(-1));
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
