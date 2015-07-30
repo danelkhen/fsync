@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>fsync</RootNamespace>
     <AssemblyName>fsync</AssemblyName>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -37,9 +37,8 @@
     <ApplicationIcon>1395430225_216095.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="corex, Version=1.0.0.0, Culture=neutral, PublicKeyToken=72f5778e2003fef2, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\github\corex\src\corex\bin\corex.dll</HintPath>
+    <Reference Include="corex">
+      <HintPath>..\..\..\corex\src\corex\bin\corex.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
