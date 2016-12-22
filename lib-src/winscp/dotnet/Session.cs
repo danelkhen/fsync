@@ -115,6 +115,7 @@ namespace WinSCP
                 Timeout = new TimeSpan(0, 1, 0);
                 _reconnectTime = new TimeSpan(0, 2, 0); // keep in sync with TScript::OptionImpl
                 Output = new StringCollection();
+                _error = new StringCollection();
                 _operationResults = new List<OperationResultBase>();
                 _events = new List<Action>();
                 _eventsEvent = new AutoResetEvent(false);
@@ -209,18 +210,34 @@ namespace WinSCP
                     log = openCommand + log;
                     WriteCommand(command, log);
 
-                    string logExplanation =
-                        string.Format(CultureInfo.CurrentCulture,
-                            "(response log file {0} was not created). This could indicate lack of write permissions to the log folder or problems starting WinSCP itself.",
-                            XmlLogPath);
-
                     // Wait until the log file gets created or WinSCP terminates (in case of fatal error)
                     do
                     {
+                        string logExplanation;
+                        lock (Output)
+                        {
+                            if (_error.Count > 0)
+                            {
+                                logExplanation = GetErrorOutputMessage();
+                            }
+                            else if (Output.Count > 0)
+                            {
+                                logExplanation =
+                                    string.Format(
+                                        CultureInfo.CurrentCulture, "Output was \"{0}\". ", ListToString(Output));
+                            }
+                            else
+                            {
+                                logExplanation = "There was no output. ";
+                            }
+                        }
+                        logExplanation +=
+                            string.Format(CultureInfo.CurrentCulture,
+                                "Response log file {0} was not created. This could indicate lack of write permissions to the log folder or problems starting WinSCP itself.",
+                                XmlLogPath);
+
                         if (_process.HasExited && !File.Exists(XmlLogPath))
                         {
-                            string[] output = new string[Output.Count];
-                            Output.CopyTo(output, 0);
                             Logger.WriteCounters();
                             Logger.WriteProcesses();
                             _process.WriteStatus();
@@ -230,17 +247,15 @@ namespace WinSCP
                                 exitCode = string.Format(CultureInfo.CurrentCulture, "{0} ({1:X})", exitCode, _process.ExitCode);
                             }
                             throw new SessionLocalException(this,
-                                string.Format(CultureInfo.CurrentCulture,
-                                    "WinSCP process terminated with exit code {0} and output \"{1}\", without responding {2}",
-                                    exitCode, string.Join(Environment.NewLine, output), logExplanation));
+                                string.Format(CultureInfo.CurrentCulture, "WinSCP process terminated with exit code {0}. ", exitCode) +
+                                logExplanation);
                         }
 
                         Thread.Sleep(50);
 
                         CheckForTimeout(
-                            string.Format(CultureInfo.CurrentCulture,
-                                "WinSCP has not responded in time {0}",
-                                logExplanation));
+                            string.Format(CultureInfo.CurrentCulture, "WinSCP has not responded in time.") +
+                            logExplanation);
 
                     } while (!File.Exists(XmlLogPath));
 
@@ -275,13 +290,31 @@ namespace WinSCP
                     }
 
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     Logger.WriteLine("Exception: {0}", e);
                     Cleanup();
                     throw;
                 }
             }
+        }
+
+        internal string GetErrorOutputMessage()
+        {
+            string result = null;
+            if (_error.Count > 0)
+            {
+                result = string.Format(CultureInfo.CurrentCulture, "Error output was \"{0}\". ", ListToString(_error));
+            }
+            return result;
+        }
+
+        private static string ListToString(StringCollection list)
+        {
+            string[] error = new string[list.Count];
+            list.CopyTo(error, 0);
+            string s = string.Join(Environment.NewLine, error);
+            return s;
         }
 
         public string ScanFingerprint(SessionOptions sessionOptions)
@@ -319,7 +352,6 @@ namespace WinSCP
 
                         CheckForTimeout();
                     }
-
 
                     string output = string.Join(Environment.NewLine, new List<string>(Output).ToArray());
                     if (_process.ExitCode == 0)
@@ -422,7 +454,7 @@ namespace WinSCP
             }
         }
 
-        private IEnumerable<RemoteFileInfo> DoEnumerateRemoteFiles(string path, Regex regex, EnumerationOptions options)
+        private IEnumerable<RemoteFileInfo> DoEnumerateRemoteFiles(string path, Regex regex, EnumerationOptions options, bool throwReadErrors)
         {
             bool allDirectories = ((options & EnumerationOptions.AllDirectories) == EnumerationOptions.AllDirectories);
             bool matchDirectories = ((options & EnumerationOptions.MatchDirectories) == EnumerationOptions.MatchDirectories);
@@ -438,47 +470,66 @@ namespace WinSCP
                 throw new ArgumentException("Cannot combine enumeration option EnumerateDirectories with MatchDirectories");
             }
 
-            // Need to use guarded method for the listing, see a comment in EnumerateRemoteFiles
-            RemoteDirectoryInfo directoryInfo = ListDirectory(path);
+            RemoteDirectoryInfo directoryInfo;
 
-            foreach (RemoteFileInfo fileInfo in directoryInfo.Files)
+            try
             {
-                if (!fileInfo.IsThisDirectory && !fileInfo.IsParentDirectory)
+                // Need to use guarded method for the listing, see a comment in EnumerateRemoteFiles
+                directoryInfo = ListDirectory(path);
+            }
+            catch (SessionRemoteException)
+            {
+                if (throwReadErrors)
                 {
-                    bool matches = regex.IsMatch(fileInfo.Name);
+                    throw;
+                }
+                else
+                {
+                    directoryInfo = null;
+                }
+            }
 
-                    bool enumerate;
-                    if (!fileInfo.IsDirectory)
+            if (directoryInfo != null)
+            {
+                foreach (RemoteFileInfo fileInfo in directoryInfo.Files)
+                {
+                    if (!fileInfo.IsThisDirectory && !fileInfo.IsParentDirectory)
                     {
-                        enumerate = matches;
-                    }
-                    else
-                    {
-                        if (enumerateDirectories)
-                        {
-                            enumerate = true;
-                        }
-                        else if (matchDirectories)
+                        bool matches = regex.IsMatch(fileInfo.Name);
+
+                        bool enumerate;
+                        if (!fileInfo.IsDirectory)
                         {
                             enumerate = matches;
                         }
                         else
                         {
-                            enumerate = false;
+                            if (enumerateDirectories)
+                            {
+                                enumerate = true;
+                            }
+                            else if (matchDirectories)
+                            {
+                                enumerate = matches;
+                            }
+                            else
+                            {
+                                enumerate = false;
+                            }
                         }
-                    }
 
-                    if (enumerate)
-                    {
-                        yield return fileInfo;
-                    }
-
-
-                    if (fileInfo.IsDirectory && allDirectories)
-                    {
-                        foreach (RemoteFileInfo fileInfo2 in DoEnumerateRemoteFiles(CombinePaths(path, fileInfo.Name), regex, options))
+                        if (enumerate)
                         {
-                            yield return fileInfo2;
+                            yield return fileInfo;
+                        }
+
+
+                        if (fileInfo.IsDirectory && allDirectories)
+                        {
+                            foreach (RemoteFileInfo fileInfo2 in DoEnumerateRemoteFiles(CombinePaths(path, fileInfo.Name), regex, options, false))
+                            {
+                                yield return fileInfo2;
+                            }
                         }
                     }
                 }
@@ -497,7 +548,7 @@ namespace WinSCP
 
                 Regex regex = MaskToRegex(mask);
 
-                return DoEnumerateRemoteFiles(path, regex, options);
+                return DoEnumerateRemoteFiles(path, regex, options, true);
             }
         }
 
@@ -1599,12 +1650,26 @@ namespace WinSCP
             else
             {
                 Logger.WriteLine("Scheduling output: [{0}]", e.Data);
-                Output.InternalAdd(e.Data);
-                if (Output.Count > 1000)
+                string s = e.Data.TrimEnd(new[] { '\r' });
+
+                lock (Output)
                 {
-                    Output.InternalRemoveFirst();
+                    Output.InternalAdd(s);
+                    if (Output.Count > 1000)
+                    {
+                        Output.InternalRemoveFirst();
+                    }
+                    if (e.Error)
+                    {
+                        _error.InternalAdd(s);
+                        if (_error.Count > 1000)
+                        {
+                            _error.InternalRemoveFirst();
+                        }
+                    }
                 }
-                ScheduleEvent(() => RaiseOutputDataReceived(e.Data));
+
+                ScheduleEvent(() => RaiseOutputDataReceived(e.Data, e.Error));
             }
 
             GotOutput();
@@ -1691,13 +1756,13 @@ namespace WinSCP
             }
         }
 
-        private void RaiseOutputDataReceived(string data)
+        private void RaiseOutputDataReceived(string data, bool error)
         {
             Logger.WriteLine("Output: [{0}]", data);
 
             if (OutputDataReceived != null)
             {
-                OutputDataReceived(this, new OutputDataReceivedEventArgs(data));
+                OutputDataReceived(this, new OutputDataReceivedEventArgs(data, error));
             }
         }
 
@@ -2123,5 +2188,6 @@ namespace WinSCP
         private string _homePath;
         private string _executableProcessUserName;
         private SecureString _executableProcessPassword;
+        private StringCollection _error;
     }
 }

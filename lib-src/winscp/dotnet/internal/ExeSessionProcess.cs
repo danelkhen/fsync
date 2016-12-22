@@ -77,7 +77,7 @@ namespace WinSCP
                 string xmlLogSwitch;
                 if (useXmlLog)
                 {
-                    xmlLogSwitch = string.Format(CultureInfo.InvariantCulture, "/xmllog=\"{0}\" /xmlgroups ", LogPathEscape(_session.XmlLogPath));
+                    xmlLogSwitch = string.Format(CultureInfo.InvariantCulture, "/xmllog=\"{0}\" /xmlgroups /xmllogrequired ", LogPathEscape(_session.XmlLogPath));
                 }
                 else
                 {
@@ -267,6 +267,7 @@ namespace WinSCP
                 while (!AbortedOrExited())
                 {
                     _logger.WriteLineLevel(1, "Waiting for request event");
+                    // Keep in sync with a delay in SessionLogReader.DoRead
                     if (_requestEvent.WaitOne(100, false))
                     {
                         _logger.WriteLineLevel(1, "Got request event");
@@ -364,7 +365,7 @@ namespace WinSCP
                             e.Str = _input[0];
                             e.Result = true;
                             _input.RemoveAt(0);
-                            Print(false, e.Str + "\n");
+                            Print(false, false, e.Str + "\n");
                             return;
                         }
                     }
@@ -374,7 +375,7 @@ namespace WinSCP
             }
         }
 
-        private void Print(bool fromBeginning, string message)
+        private void Print(bool fromBeginning, bool error, string message)
         {
             if (fromBeginning && ((message.Length == 0) || (message[0] != '\n')))
             {
@@ -390,24 +391,24 @@ namespace WinSCP
             {
                 if (!string.IsNullOrEmpty(_lastFromBeginning))
                 {
-                    AddToOutput(_lastFromBeginning);
+                    AddToOutput(_lastFromBeginning, false);
                     _lastFromBeginning = null;
                 }
 
                 if (fromBeginning && (message.Length > 0) && (message[0] == '\n'))
                 {
-                    AddToOutput("\n");
+                    AddToOutput("\n", false);
                     _lastFromBeginning = message.Substring(1);
                     _logger.WriteLine("Buffered from-beginning message [{0}]", _lastFromBeginning);
                 }
                 else
                 {
-                    AddToOutput(message);
+                    AddToOutput(message, error);
                 }
             }
         }
 
-        private void AddToOutput(string message)
+        private void AddToOutput(string message, bool error)
         {
             string[] lines = (_incompleteLine + message).Split(new[] { '\n' });
 
@@ -417,7 +418,7 @@ namespace WinSCP
             {
                 if (OutputDataReceived != null)
                 {
-                    OutputDataReceived(this, new OutputDataReceivedEventArgs(lines[i]));
+                    OutputDataReceived(this, new OutputDataReceivedEventArgs(lines[i], error));
                 }
             }
         }
@@ -425,7 +426,7 @@ namespace WinSCP
         private void ProcessPrintEvent(ConsolePrintEventStruct e)
         {
             _logger.WriteLineLevel(1, string.Format(CultureInfo.CurrentCulture, "Print: {0}", e.Message));
-            Print(e.FromBeginning, e.Message);
+            Print(e.FromBeginning, e.Error, e.Message);
         }
 
         private void ProcessInitEvent(ConsoleInitEventStruct e)
