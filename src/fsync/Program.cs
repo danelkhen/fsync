@@ -193,8 +193,10 @@ namespace fsync
                 Protocol = Protocol.Sftp,
                 HostName = sessionConf["HostName"],
                 UserName = sessionConf["UserName"],
-                Password = sessionConf["Password"],
+                Password = sessionConf.TryGetValue("Password"),
                 GiveUpSecurityAndAcceptAnySshHostKey = true,
+                SshPrivateKeyPath = sessionConf.TryGetValue("SshPrivateKeyPath"),
+                PrivateKeyPassphrase = sessionConf.TryGetValue("SshPrivateKeyPassphrase"),
             };
 
             var ss = new Session();
