@@ -53,7 +53,7 @@ namespace WinSCP
     [ClassInterface(Constants.ClassInterface)]
     [ComVisible(true)]
     [ComSourceInterfaces(typeof(ISessionEvents))]
-    public  sealed partial class Session : IDisposable, IReflect
+    public sealed partial class Session : IDisposable, IReflect
     {
         public string ExecutablePath { get { return _executablePath; } set { CheckNotOpened(); _executablePath = value; } }
         public string ExecutableProcessUserName { get { return _executableProcessUserName; } set { CheckNotOpened(); _executableProcessUserName = value; } }
