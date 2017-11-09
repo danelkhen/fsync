@@ -46,11 +46,10 @@ namespace fsync
             var list2 = new List<FileSystemEventArgs>();
             foreach (var e in list)
             {
-                if (e.ChangeType == WatcherChangeTypes.Changed)
+                if (e.ChangeType == WatcherChangeTypes.Changed || e.ChangeType == WatcherChangeTypes.Renamed)
                 {
                     if (e.Name.Contains("~"))
                         continue;
-                    //if (File.Exists(e.FullPath))
                     list2.Add(e);
                 }
             }
